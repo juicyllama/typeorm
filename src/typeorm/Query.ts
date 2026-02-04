@@ -50,9 +50,12 @@ export class Query<T extends ObjectLiteral> {
             const record = repository.create(data)
             const result = await repository.save(record)
 
-            const createdRecord = relations?.length
-                ? await this.findOneById(repository, this.getRecordId(repository, result), relations)
-                : result
+            const recordId = this.getRecordId(repository, result)
+            const createdRecord = relations?.length ? await this.findOneById(repository, recordId, relations) : result
+
+            if (!createdRecord) {
+                throw new Error(`Created record ${repository.metadata.tableName} with id ${recordId} not found`)
+            }
 
             logger.verbose(`[CREATE][${repository.metadata.tableName}] Result:`, {
                 context: ['@juicyllama/typeorm', 'create', repository.metadata.tableName],
@@ -265,8 +268,11 @@ export class Query<T extends ObjectLiteral> {
         const result = await repository.find(options)
 
         logger.verbose(`[FIND][ALL][${repository.metadata.tableName}] Result:`, {
-            first: result[0],
-            last: result[result.length - 1],
+            params: {
+                total: result.length,
+                first: result[0],
+                last: result[result.length - 1],
+            },
             context: ['@juicyllama/typeorm', 'findAll', repository.metadata.tableName],
         })
 
@@ -337,8 +343,10 @@ export class Query<T extends ObjectLiteral> {
 
     async sum(repository: Repository<T>, metric: string, options?: FindManyOptions<T>): Promise<number> {
         logger.verbose(`[SUM][${repository.metadata.tableName}]`, {
-            metric: metric,
-            params: options,
+            params: {
+                metric: metric,
+                options,
+            },
             context: ['@juicyllama/typeorm', 'sum', repository.metadata.tableName],
         })
 
@@ -346,7 +354,7 @@ export class Query<T extends ObjectLiteral> {
 
         const result = await repository
             .createQueryBuilder()
-            .where(options.where)
+            .where(options.where ?? '1=1')
             .select(`SUM(${metric}) as sum`)
             .execute()
 
@@ -362,8 +370,10 @@ export class Query<T extends ObjectLiteral> {
 
     async avg(repository: Repository<T>, metric: string, options?: FindManyOptions<T>): Promise<number> {
         logger.verbose(`[AVG][${repository.metadata.tableName}]`, {
-            metric: metric,
-            params: options,
+            params: {
+                metric: metric,
+                options,
+            },
             context: ['@juicyllama/typeorm', 'avg', repository.metadata.tableName],
         })
 
@@ -371,7 +381,7 @@ export class Query<T extends ObjectLiteral> {
 
         const result = await repository
             .createQueryBuilder()
-            .where(options.where)
+            .where(options.where ?? '1=1')
             .select(`AVG(${metric}) as average`)
             .execute()
 
@@ -436,7 +446,6 @@ export class Query<T extends ObjectLiteral> {
 
     async copyTable(repository: Repository<T>, table_name?: string): Promise<void> {
         logger.verbose(`[COPY][TABLE][${repository.metadata.tableName}]`, {
-            table_name: table_name,
             context: ['@juicyllama/typeorm', 'copyTable', repository.metadata.tableName],
         })
 
@@ -463,7 +472,6 @@ export class Query<T extends ObjectLiteral> {
 
     async restoreTable(repository: Repository<T>, table_name?: string): Promise<void> {
         logger.verbose(`Restore Table`, {
-            table_name: table_name,
             context: ['@juicyllama/typeorm', 'restoreTable', repository.metadata.tableName],
         })
 
@@ -482,7 +490,6 @@ export class Query<T extends ObjectLiteral> {
 
     async dropTable(repository: Repository<T>, table_name: string): Promise<void> {
         logger.verbose(`Drop Table`, {
-            table_name: table_name,
             context: ['@juicyllama/typeorm', 'dropTable', repository.metadata.tableName],
         })
 
@@ -560,7 +567,7 @@ export class Query<T extends ObjectLiteral> {
         account_ids?: number[]
         search_fields?: string[]
     }): FindOptionsWhere<T>[] | FindOptionsWhere<T> {
-        const where = []
+        const where: FindOptionsWhere<T>[] = []
         const relationsProperty = options.repository.metadata.relations.map(relation => relation.propertyName)
 
         let whereBase: FindOptionsWhere<T> = {}
@@ -728,22 +735,22 @@ export class Query<T extends ObjectLiteral> {
         const logger = new Logger()
 
         if (e.message.startsWith('Duplicate entry')) {
-            logger.warn(`[SQL][CREATE] Duplicate entry: ${e.message}`, {
-                repository: {
-                    tableName: repository.metadata.tableName,
+            logger.warn(`Duplicate entry: ${e.message}`, {
+                context: ['@juicyllama/typeorm', '[SQL]', '[CREATE]', repository.metadata.tableName],
+                params: {
+                    data: data,
+                    error: e.message,
                 },
-                data: data,
-                error: e,
             })
         } else {
-            logger.error(`[SQL][CREATE] Error: ${e.message}`, {
-                repository: {
-                    tableName: repository.metadata.tableName,
-                },
-                data: data,
-                error: {
-                    message: e.message,
-                    stack: e.stack,
+            logger.error(`Error: ${e.message}`, {
+                context: ['@juicyllama/typeorm', '[SQL]', '[CREATE]', repository.metadata.tableName],
+                params: {
+                    data: data,
+                    error: {
+                        message: e.message,
+                        stack: e.stack,
+                    },
                 },
             })
         }
@@ -753,22 +760,22 @@ export class Query<T extends ObjectLiteral> {
         const logger = new Logger()
 
         if (e.message.startsWith('Duplicate entry')) {
-            logger.warn(`[SQL][UPDATE] Duplicate entry: ${e.message}`, {
-                repository: {
-                    tableName: repository.metadata.tableName,
+            logger.warn(`Duplicate entry: ${e.message}`, {
+                context: ['@juicyllama/typeorm', '[SQL]', '[UPDATE]', repository.metadata.tableName],
+                params: {
+                    data: data,
+                    error: e.message,
                 },
-                data: data,
-                error: e,
             })
         } else {
-            logger.error(`[SQL][UPDATE]  ${e.message}`, {
-                repository: {
-                    tableName: repository.metadata.tableName,
-                },
-                data: data,
-                error: {
-                    message: e.message,
-                    stack: e.stack,
+            logger.error(`Error: ${e.message}`, {
+                context: ['@juicyllama/typeorm', '[SQL]', '[UPDATE]', repository.metadata.tableName],
+                params: {
+                    data: data,
+                    error: {
+                        message: e.message,
+                        stack: e.stack,
+                    },
                 },
             })
         }
