@@ -184,7 +184,7 @@ export class Query<T extends ObjectLiteral> {
 
         const result = await this.findOne(repository, {
             where: where,
-            relations: relations === undefined ? this.getRelations(repository) : relations,
+            relations: relations ?? this.getRelations(repository),
         })
 
         if (Env.IsNotProd()) {
