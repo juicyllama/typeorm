@@ -31,7 +31,7 @@
         "format": "prettier --write \"src/**/*.ts\"",
         "lint": "eslint \"src/**/*.ts\" --fix",
         "test": "NODE_ENV=test && jest --runInBand",
-        "before:commit": "npm run lint && npm run format && npm run test && npm run build"
+        "go": "npm run lint && npm run format && npm run test && npm run build"
     },
     "dependencies": {
         "typeorm-naming-strategies": "^4.1.0",
