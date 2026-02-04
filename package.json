@@ -1,0 +1,70 @@
+{
+    "name": "@juicyllama/typeorm",
+    "version": "0.0.0",
+    "description": "A NestJS / TypeORM Opinionated Utility",
+    "author": {
+        "name": "JuicyLlama Studio",
+        "email": "studio@juicyllama.com",
+        "url": "https://juicyllama.com"
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/juicyllama/typeorm"
+    },
+    "bugs": "https://github.com/juicyllama/typeorm/issues",
+    "license": "BSD-4-Clause",
+    "readmeFilename": "README.md",
+    "main": "dist/index.js",
+    "files": [
+        "dist/**/*",
+        "*.md"
+    ],
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "prepare": "husky",
+        "build": "tsc",
+        "start:dev": "tsc -w",
+        "format": "prettier --write \"src/**/*.ts\"",
+        "lint": "eslint \"src/**/*.ts\" --fix",
+        "test": "NODE_ENV=test && jest --runInBand",
+        "before:commit": "npm run lint && npm run format && npm run test && npm run build"
+    },
+    "dependencies": {
+       "typeorm-naming-strategies": "^4.1.0",
+       "lodash": "^4.17.21"
+    },
+    "peerDependencies": {
+        "@juicyllama/utils": "^1.3.1",
+        "@nestjs/common": "^11.0.0",
+        "@nestjs/typeorm": "^11.0.0",
+        "typeorm": "^0.3.0"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^19.8.1",
+        "@commitlint/config-conventional": "^19.8.1",
+        "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+        "@types/core-js": "^2.5.0",
+        "@types/jest": "^30.0.0",
+        "eslint": "^9.35.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-import": "^2.32.0",
+        "eslint-plugin-prettier": "^5.5.4",
+        "husky": "^9.1.7",
+        "jest": "^29.7.0",
+        "lint-staged": "^16.1.6",
+        "rimraf": "^6.0.1",
+        "ts-jest": "^29.4.1",
+        "typescript": "^5.9.2",
+        "typescript-eslint": "^8.42.0"
+    },
+    "lint-staged": {
+        "src/**/*.{ts,js}": [
+            "eslint --fix",
+            "prettier --write"
+        ]
+    }
+}
