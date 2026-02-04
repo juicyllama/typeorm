@@ -5,7 +5,7 @@ import { existsSync } from 'fs'
 import { dirname, join } from 'path'
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies'
 
-type BuildTypeOrmConfigOptions = {
+interface BuildTypeOrmConfigOptions {
     /**
      * Force using TypeScript sources (useful for CLI migration:generate).
      * Defaults to true only when this file itself is executed as TS.
@@ -15,9 +15,9 @@ type BuildTypeOrmConfigOptions = {
 
 export const buildTypeOrmConfig = (
     databaseUrl?: string,
-    options: BuildTypeOrmConfigOptions = {},
+    options: BuildTypeOrmConfigOptions = {}
 ): TypeOrmModuleOptions => {
-    const url = databaseUrl ?? process.env['DATABASE_URL']
+    const url = databaseUrl ?? process.env.DATABASE_URL
 
     if (!url) {
         throw new Error('DATABASE_URL is not defined')

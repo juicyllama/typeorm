@@ -10,12 +10,12 @@ export class TypeOrmFilter implements ExceptionFilter {
         const code: string = (exception as any).code
         const details: string = (exception as any).sql
 
-        const logger = new Logger(['@packages/data', 'utils', 'typeorm'])
+        const logger = new Logger()
 
         switch (code) {
             default:
                 logger.debug(`[${code}] ${message} (${details})`, {
-                    context: ['TypeOrmFilter'],
+                    context: ['@juicyllama/typeorm', 'TypeOrmFilter'],
                     params: [exception],
                 })
         }

@@ -20,6 +20,7 @@ import {
     ObjectLiteral,
     Repository,
 } from 'typeorm'
+
 import { Entries, TypeOrm } from './TypeOrm'
 import { BulkUploadResponse, ImportMode } from './common'
 
@@ -33,7 +34,7 @@ export class Query<T extends ObjectLiteral> {
      */
 
     async raw(repository: Repository<T>, sql: string): Promise<unknown[]> {
-        logger.verbose(`${sql}`, {
+        logger.verbose(sql, {
             context: ['@juicyllama/typeorm', 'raw', repository.metadata.tableName],
         })
         return await repository.query(sql)
@@ -97,7 +98,7 @@ export class Query<T extends ObjectLiteral> {
         repository: Repository<T>,
         data: DeepPartial<T>[],
         import_mode: ImportMode,
-        dedup_field?: string,
+        dedup_field?: string
     ): Promise<BulkUploadResponse> {
         logger.verbose(`bulk import`, {
             context: ['@juicyllama/typeorm', 'bulk', repository.metadata.tableName, import_mode],
@@ -138,7 +139,7 @@ export class Query<T extends ObjectLiteral> {
                     await this.dropTable(repository, `${repository.metadata.tableName}_COPY`)
                 } catch (e: unknown) {
                     const error = e instanceof Error ? e : new Error(String(e))
-                    logger.error(`${error.message}`, {
+                    logger.error(error.message, {
                         context: ['@juicyllama/typeorm', 'bulk', repository.metadata.tableName, import_mode],
                         params: error,
                     })
@@ -203,7 +204,7 @@ export class Query<T extends ObjectLiteral> {
     async findOneByWhere(
         repository: Repository<T>,
         where: FindOptionsWhere<T>[] | FindOptionsWhere<T>,
-        options?: FindManyOptions,
+        options?: FindManyOptions
     ): Promise<T | null> {
         options = TypeOrm.findOneOptionsWrapper<T>(repository, options)
 
@@ -285,11 +286,12 @@ export class Query<T extends ObjectLiteral> {
             context: ['@juicyllama/typeorm', 'update', repository.metadata.tableName],
         })
 
-        if (!this.getRecordId(repository, data)) {
+        const recordId = this.getRecordId(repository, data)
+        if (!recordId) {
             throw new Error(
                 `Primary key ${
                     this.getPrimaryKey(repository) as string
-                } missing from update to ${repository.metadata.tableName}`,
+                } missing from update to ${repository.metadata.tableName}`
             )
         }
 
@@ -298,7 +300,12 @@ export class Query<T extends ObjectLiteral> {
             const entity = repository.create(data as any)
             await repository.save(entity)
 
-            return (await this.findOneById(repository, this.getRecordId(repository, data), relations))!
+            const updatedRecord = await this.findOneById(repository, recordId, relations)
+            if (!updatedRecord) {
+                throw new Error(`Updated record ${repository.metadata.tableName} with id ${recordId} not found`)
+            }
+
+            return updatedRecord
         } catch (e: unknown) {
             this.logUpdateError(e instanceof Error ? e : new Error(String(e)), repository, data)
             throw e
@@ -580,7 +587,7 @@ export class Query<T extends ObjectLiteral> {
                                     ...memo,
                                     this.mapComparisonOperatorToTypeORMFindOperators(
                                         ComparisonOperator[opKeyName as keyof typeof ComparisonOperator],
-                                        lookupValue,
+                                        lookupValue
                                     ),
                                 ]
                             }
@@ -614,24 +621,24 @@ export class Query<T extends ObjectLiteral> {
             }
         }
 
-        if (options.query?.['search']?.length === 1 && options.query?.['search'][0] === 'undefined') {
-            delete options.query['search']
+        if (options.query?.search?.length === 1 && options.query?.search[0] === 'undefined') {
+            delete options.query.search
         }
 
-        if (!options.query?.['search'] || !options.search_fields) {
+        if (!options.query?.search || !options.search_fields) {
             return whereBase
         }
 
-        if (options.query?.['relations']?.length === 1 && options.query?.['relations'][0] === 'undefined') {
-            delete options.query['relations']
+        if (options.query?.relations?.length === 1 && options.query?.relations[0] === 'undefined') {
+            delete options.query.relations
         }
 
         for (const search of options.search_fields) {
             // behind the scenes typeORM converts the different array members to OR clauses, and ObjectLiterals to AND clauses
             let whereToMerge = {}
-            const searchValue = Array.isArray(options.query['search'])
-                ? options.query['search'].join(' ')
-                : options.query['search'] || ''
+            const searchValue = Array.isArray(options.query.search)
+                ? options.query.search.join(' ')
+                : options.query.search || ''
             if (search.includes('.')) {
                 whereToMerge = {
                     ...whereToMerge,
@@ -654,7 +661,7 @@ export class Query<T extends ObjectLiteral> {
             select?: string | string[]
             relations?: string | string[]
         },
-        where: FindOptionsWhere<T>[] | FindOptionsWhere<T>,
+        where: FindOptionsWhere<T>[] | FindOptionsWhere<T>
     ): FindOneOptions<T> {
         let select: string[] | undefined
         let relations: string[] | undefined
@@ -686,7 +693,7 @@ export class Query<T extends ObjectLiteral> {
             order_by_type?: string
         },
         where: FindOptionsWhere<T>[] | FindOptionsWhere<T>,
-        fallback_order_column?: string,
+        fallback_order_column?: string
     ): FindManyOptions<T> {
         let select: string[] | undefined
         let relations: string[] | undefined
@@ -802,7 +809,7 @@ export class Query<T extends ObjectLiteral> {
     async upsertBulkRecords(
         repository: Repository<T>,
         data: DeepPartial<T>[],
-        dedup_field: string,
+        dedup_field: string
     ): Promise<BulkUploadResponse> {
         // due to performance issues adding thousands of records at once (with possible subscribers etc), we will insert records individually
 
@@ -854,7 +861,7 @@ export class Query<T extends ObjectLiteral> {
     async deleteBulkRecords(
         repository: Repository<T>,
         data: DeepPartial<T>[],
-        dedup_field: string,
+        dedup_field: string
     ): Promise<BulkUploadResponse> {
         const result: BulkUploadResponse = {
             total: data.length,
@@ -898,7 +905,7 @@ export class Query<T extends ObjectLiteral> {
     private createWhereRelations(
         keyString: string,
         value: string | FindOperator<string>,
-        relations: string[],
+        relations: string[]
     ): FindOptionsWhere<T> {
         const keys = keyString.split('.')
 
