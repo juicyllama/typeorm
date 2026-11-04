@@ -23,6 +23,7 @@ import {
 
 import { Entries, TypeOrm } from './TypeOrm'
 import { BulkUploadResponse, ImportMode } from './common'
+import { toFindObject } from './find-shape'
 
 const logger = new Logger()
 
@@ -184,8 +185,8 @@ export class Query<T extends ObjectLiteral> {
 
         const result = await this.findOne(repository, {
             where: where,
-            relations: relations ?? this.getRelations(repository),
-        })
+            relations: toFindObject(relations ?? this.getRelations(repository)),
+        } as FindOneOptions<T>)
 
         if (Env.IsNotProd()) {
             logger.verbose(`Result`, {
@@ -670,21 +671,10 @@ export class Query<T extends ObjectLiteral> {
         },
         where: FindOptionsWhere<T>[] | FindOptionsWhere<T>
     ): FindOneOptions<T> {
-        let select: string[] | undefined
-        let relations: string[] | undefined
-
-        if (query.select) {
-            select = typeof query.select === 'string' ? query.select.split(',') : query.select
-        }
-
-        if (query.relations) {
-            relations = typeof query.relations === 'string' ? query.relations.split(',') : query.relations
-        }
-
         const options = {
             where: where,
-            relations: relations ?? null,
-            select: select ?? null,
+            relations: toFindObject(query.relations),
+            select: toFindObject(query.select),
         }
 
         return omitBy(options, isNil)
@@ -702,25 +692,14 @@ export class Query<T extends ObjectLiteral> {
         where: FindOptionsWhere<T>[] | FindOptionsWhere<T>,
         fallback_order_column?: string
     ): FindManyOptions<T> {
-        let select: string[] | undefined
-        let relations: string[] | undefined
-
-        if (query.select) {
-            select = typeof query.select === 'string' ? query.select.split(',') : query.select
-        }
-
-        if (query.relations) {
-            relations = typeof query.relations === 'string' ? query.relations.split(',') : query.relations
-        }
-
         const options = {
             take: query.limit ?? 20,
             skip: query.offset ?? 0,
             order: query.order_by
                 ? { [query.order_by]: query.order_by_type ?? 'ASC' }
                 : { [fallback_order_column ?? 'created_at']: 'DESC' },
-            select: select ?? null,
-            relations: relations ?? null,
+            select: toFindObject(query.select),
+            relations: toFindObject(query.relations),
             where: where,
         }
 

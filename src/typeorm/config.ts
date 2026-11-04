@@ -3,7 +3,8 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm'
 import 'dotenv/config'
 import { existsSync } from 'fs'
 import { dirname, join } from 'path'
-import { SnakeNamingStrategy } from 'typeorm-naming-strategies'
+
+import { SnakeNamingStrategy } from './snake-naming.strategy'
 
 interface BuildTypeOrmConfigOptions {
     /**
