@@ -4,6 +4,8 @@ import { FindManyOptions } from 'typeorm/find-options/FindManyOptions'
 import { FindOneOptions } from 'typeorm/find-options/FindOneOptions'
 import { FindOptionsWhere } from 'typeorm/find-options/FindOptionsWhere'
 
+import { normalizeFindShape, toFindObject } from './find-shape'
+
 /**
  * Helper function to:
  * * At controller level, take query, where and other settings and convert it to a FindManyOptions object
@@ -13,20 +15,12 @@ export function findOptions<T extends ObjectLiteral>(
     where: FindOptionsWhere<T>[] | FindOptionsWhere<T>,
     default_sort: string
 ): FindManyOptions<T> {
-    if (query.select) {
-        query.select = query.select.split(',')
-    }
-
-    if (query.relations) {
-        query.relations = query.relations.split(',')
-    }
-
     const options = {
         take: query.limit ?? 20,
         skip: query.offset ?? 0,
         order: query.order_by ? { [query.order_by]: query.order_by_type ?? 'ASC' } : { [default_sort]: 'ASC' },
-        select: query.select ?? null,
-        relations: query.relations ?? null,
+        select: toFindObject(query.select),
+        relations: toFindObject(query.relations),
         where: where,
     }
 
@@ -37,17 +31,9 @@ export function findOneOptions<T extends ObjectLiteral>(
     query: any,
     where: FindOptionsWhere<T>[] | FindOptionsWhere<T>
 ): FindOneOptions<T> {
-    if (query.select) {
-        query.select = query.select.split(',')
-    }
-
-    if (query.relations) {
-        query.relations = query.relations.split(',')
-    }
-
     const options = {
-        select: query.select ?? null,
-        relations: query.relations ?? null,
+        select: toFindObject(query.select),
+        relations: toFindObject(query.relations),
         where: where,
     }
 
@@ -66,6 +52,7 @@ export function findAllOptionsWrapper<T extends ObjectLiteral>(
     options = handleEmptyOptions(repository, options)
     options = handleEmptyWhere(repository, options)
     options = handleEmptyRelations(repository, options)
+    options = normalizeFindShape(options)
     options = filterOutInvalidSelectValues(repository, options)
     return options
 }
@@ -76,6 +63,7 @@ export function findOneOptionsWrapper<T extends ObjectLiteral>(
 ): FindManyOptions {
     options = handleEmptyOptions(repository, options)
     options = handleEmptyRelations(repository, options)
+    options = normalizeFindShape(options)
     options = filterOutInvalidSelectValues(repository, options)
     return options
 }
@@ -84,12 +72,13 @@ export function filterOutInvalidSelectValues<T extends ObjectLiteral>(
     repository: Repository<T>,
     options: FindManyOptions
 ): FindManyOptions {
-    if (options?.select) {
-        options.select = (options.select as string[]) || []
-        const validSelectValues: string[] = repository.metadata.columns.map(column => column.propertyName)
-        options.select = options.select.filter(
-            (select: string | number | symbol) => typeof select === 'string' && validSelectValues.includes(select)
-        )
+    if (options?.select && typeof options.select === 'object') {
+        const validSelectValues = new Set(repository.metadata.columns.map(column => column.propertyName))
+        const next: Record<string, unknown> = {}
+        for (const [key, value] of Object.entries(options.select)) {
+            if (validSelectValues.has(key)) next[key] = value
+        }
+        options.select = next as typeof options.select
     }
     return options
 }
@@ -121,9 +110,9 @@ export function handleEmptyRelations<T extends ObjectLiteral>(
     repository: Repository<T>,
     options: FindManyOptions = {}
 ) {
-    const relations = repository.metadata.relations.map(relation => relation.propertyName)
-
-    options.relations ??= relations
+    options.relations ??= Object.fromEntries(
+        repository.metadata.relations.map(relation => [relation.propertyName, true])
+    )
 
     return options
 }
